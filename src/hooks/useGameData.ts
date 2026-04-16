@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import Papa from "papaparse";
 import { GameDataRow, DataCategory, CATEGORIES } from "@/src/types/game";
 
@@ -12,10 +12,21 @@ export function useGameData(category: DataCategory) {
     if (!config) return;
 
     setLoading(true);
-    const fileUrl = new URL(config.file, import.meta.env.BASE_URL).toString();
+    setError(null);
+
+    const baseUrl = import.meta.env.BASE_URL.endsWith("/")
+      ? import.meta.env.BASE_URL
+      : `${import.meta.env.BASE_URL}/`;
+    const fileUrl = `${baseUrl}${config.file}`;
 
     fetch(fileUrl)
-      .then((response) => response.text())
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Failed to load ${config.file} (${response.status})`);
+        }
+
+        return response.text();
+      })
       .then((csv) => {
         Papa.parse<GameDataRow>(csv, {
           header: true,
