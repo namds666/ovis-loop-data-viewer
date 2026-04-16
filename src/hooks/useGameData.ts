@@ -12,7 +12,9 @@ export function useGameData(category: DataCategory) {
     if (!config) return;
 
     setLoading(true);
-    fetch(config.file)
+    const fileUrl = new URL(config.file, import.meta.env.BASE_URL).toString();
+
+    fetch(fileUrl)
       .then((response) => response.text())
       .then((csv) => {
         Papa.parse<GameDataRow>(csv, {

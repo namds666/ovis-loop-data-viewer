@@ -26,10 +26,10 @@ export interface CategoryConfig {
 }
 
 export const CATEGORIES: CategoryConfig[] = [
-  { id: "skills", label: "Skills", file: "/skills.csv" },
-  { id: "items", label: "Items", file: "/items.csv" },
-  { id: "boosters", label: "Boosters", file: "/boosters.csv" },
-  { id: "metaprogress", label: "Metaprogress", file: "/metaprogress.csv" },
-  { id: "weapons", label: "Weapons", file: "/weapons.csv" },
-  { id: "weapon_modify", label: "Weapon Modify", file: "/weapon_modify.csv" },
+  { id: "skills", label: "Skills", file: "skills.csv" },
+  { id: "items", label: "Items", file: "items.csv" },
+  { id: "boosters", label: "Boosters", file: "boosters.csv" },
+  { id: "metaprogress", label: "Metaprogress", file: "metaprogress.csv" },
+  { id: "weapons", label: "Weapons", file: "weapons.csv" },
+  { id: "weapon_modify", label: "Weapon Modify", file: "weapon_modify.csv" },
 ];

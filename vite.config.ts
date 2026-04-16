@@ -5,7 +5,11 @@ import {defineConfig, loadEnv} from 'vite';
 
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
+  const repositoryName = process.env.GITHUB_REPOSITORY?.split('/')[1] ?? 'ovis-loop-data-viewer';
+  const base = process.env.GITHUB_ACTIONS === 'true' ? `/${repositoryName}/` : '/';
+
   return {
+    base,
     plugins: [react(), tailwindcss()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
