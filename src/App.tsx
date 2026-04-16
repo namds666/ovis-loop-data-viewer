@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/src/components/DataTable";
@@ -38,6 +38,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<DataCategory>("skills");
   const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>(getStoredLanguage);
   const { data, loading, error } = useGameData(activeTab);
+  const groupCount = useMemo(() => new Set(data.map((row) => row.GroupID)).size, [data]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, selectedLanguage);
@@ -85,7 +86,7 @@ export default function App() {
                     <div>
                       <CardTitle className="text-2xl">{cat.label} Database</CardTitle>
                       <CardDescription>
-                        Managing {data.length} entries in the {cat.label} category.
+                        Viewing {groupCount} groups built from {data.length} raw rows in the {cat.label} category.
                       </CardDescription>
                     </div>
                   </div>

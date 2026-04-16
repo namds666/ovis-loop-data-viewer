@@ -1,12 +1,4 @@
-import React, { useState, useMemo } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { useDeferredValue, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -17,8 +9,8 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { GameDataRow } from "@/src/types/game";
-import { ChevronDown, ChevronUp, Search, Filter, Layers } from "lucide-react";
+import { GameDataRow, GroupedGameEntry } from "@/src/types/game";
+import { ArrowDownAZ, ArrowUpAZ, Search } from "lucide-react";
 
 interface DataTableProps {
   data: GameDataRow[];
@@ -26,141 +18,219 @@ interface DataTableProps {
 }
 
 type SortConfig = {
-  key: keyof GameDataRow | null;
+  key: "title" | "comment" | "desc" | "GroupID";
   direction: "asc" | "desc";
 };
 
+const PRIMARY_ROW_TYPES = new Set(["title", "comment"]);
+
+function getLocalizedValue(row: GameDataRow | undefined, selectedLanguage: string) {
+  return row?.[selectedLanguage]?.trim() || "";
+}
+
+function buildGroupedEntries(
+  data: GameDataRow[],
+  selectedLanguage: string
+): GroupedGameEntry[] {
+  const rowsByGroupId = data.reduce((acc, row) => {
+    const key = row.GroupID?.trim() || "Unknown";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(row);
+    return acc;
+  }, {} as Record<string, GameDataRow[]>);
+
+  return Object.entries(rowsByGroupId).map(([groupId, rows]) => {
+    const titleRow = rows.find((row) => row.TextID?.trim().toLowerCase() === "title");
+    const commentRow = rows.find((row) => row.TextID?.trim().toLowerCase() === "comment");
+    const details = rows
+      .filter((row) => !PRIMARY_ROW_TYPES.has(row.TextID?.trim().toLowerCase()))
+      .map((row) => ({
+        label: row.TextID?.trim() || "Desc",
+        value: getLocalizedValue(row, selectedLanguage),
+      }))
+      .filter((field) => field.value);
+
+    const descField =
+      details.find((field) => field.label.toLowerCase() === "desc") ?? details[0];
+
+    return {
+      GroupID: groupId,
+      title: getLocalizedValue(titleRow, selectedLanguage) || groupId,
+      comment: getLocalizedValue(commentRow, selectedLanguage),
+      desc: descField?.value || "",
+      primaryDescLabel: descField?.label || "Desc",
+      extraFields: descField
+        ? details.filter((field) => field !== descField)
+        : [],
+      rowCount: rows.length,
+    };
+  });
+}
+
 export function DataTable({ data, selectedLanguage }: DataTableProps) {
   const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<SortConfig>({ key: null, direction: "asc" });
-  const [groupBy, setGroupBy] = useState<keyof GameDataRow | "none">("none");
+  const [sort, setSort] = useState<SortConfig>({ key: "title", direction: "asc" });
+  const deferredSearch = useDeferredValue(search);
 
-  const filteredData = useMemo(() => {
-    return data.filter((row) =>
-      Object.values(row).some((val) =>
-        String(val).toLowerCase().includes(search.toLowerCase())
-      )
+  const groupedEntries = useMemo(
+    () => buildGroupedEntries(data, selectedLanguage),
+    [data, selectedLanguage]
+  );
+
+  const filteredEntries = useMemo(() => {
+    const normalizedSearch = deferredSearch.trim().toLowerCase();
+    if (!normalizedSearch) return groupedEntries;
+
+    return groupedEntries.filter((entry) =>
+      [
+        entry.GroupID,
+        entry.title,
+        entry.comment,
+        entry.desc,
+        ...entry.extraFields.flatMap((field) => [field.label, field.value]),
+      ].some((value) => value.toLowerCase().includes(normalizedSearch))
     );
-  }, [data, search]);
+  }, [deferredSearch, groupedEntries]);
 
-  const sortedData = useMemo(() => {
-    if (!sort.key) return filteredData;
+  const sortedEntries = useMemo(() => {
+    return [...filteredEntries].sort((a, b) => {
+      const aValue = a[sort.key].toLowerCase();
+      const bValue = b[sort.key].toLowerCase();
 
-    return [...filteredData].sort((a, b) => {
-      const aVal = String(a[sort.key!] || "");
-      const bVal = String(b[sort.key!] || "");
-
-      if (aVal < bVal) return sort.direction === "asc" ? -1 : 1;
-      if (aVal > bVal) return sort.direction === "asc" ? 1 : -1;
+      if (aValue < bValue) return sort.direction === "asc" ? -1 : 1;
+      if (aValue > bValue) return sort.direction === "asc" ? 1 : -1;
       return 0;
     });
-  }, [filteredData, sort]);
-
-  const groupedData = useMemo(() => {
-    if (groupBy === "none") return { "All Items": sortedData };
-
-    return sortedData.reduce((acc, row) => {
-      const key = String(row[groupBy] || "Unknown");
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(row);
-      return acc;
-    }, {} as Record<string, GameDataRow[]>);
-  }, [sortedData, groupBy]);
-
-  const handleSort = (key: keyof GameDataRow) => {
-    setSort((prev) => ({
-      key,
-      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
-    }));
-  };
-
-  const columns: (keyof GameDataRow)[] = ["GroupID", "TextID", "Comment", selectedLanguage as keyof GameDataRow];
+  }, [filteredEntries, sort]);
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col md:flex-row gap-4 items-end">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end">
         <div className="flex-1 space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <Search className="w-4 h-4" /> Search
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <Search className="h-4 w-4" /> Search
           </label>
           <Input
-            placeholder="Search all fields..."
+            placeholder="Search grouped entries..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(event) => setSearch(event.target.value)}
             className="max-w-sm"
           />
         </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <Layers className="w-4 h-4" /> Group By
-          </label>
-          <Select value={groupBy} onValueChange={(v) => setGroupBy(v as any)}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Group by..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">None</SelectItem>
-              <SelectItem value="GroupID">Group ID</SelectItem>
-              <SelectItem value="TextID">Text ID</SelectItem>
-              <SelectItem value="Comment">Comment</SelectItem>
-            </SelectContent>
-          </Select>
+
+        <div className="flex gap-3">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Sort By</label>
+            <Select
+              value={sort.key}
+              onValueChange={(value) =>
+                setSort((prev) => ({ ...prev, key: value as SortConfig["key"] }))
+              }
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Sort by..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="title">Title</SelectItem>
+                <SelectItem value="comment">Comment</SelectItem>
+                <SelectItem value="desc">Desc</SelectItem>
+                <SelectItem value="GroupID">Group ID</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Direction</label>
+            <Select
+              value={sort.direction}
+              onValueChange={(value) =>
+                setSort((prev) => ({ ...prev, direction: value as SortConfig["direction"] }))
+              }
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Direction" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="asc">
+                  <span className="flex items-center gap-2">
+                    <ArrowUpAZ className="h-4 w-4" />
+                    Asc
+                  </span>
+                </SelectItem>
+                <SelectItem value="desc">
+                  <span className="flex items-center gap-2">
+                    <ArrowDownAZ className="h-4 w-4" />
+                    Desc
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+      </div>
+
+      <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <span>{sortedEntries.length} grouped entries</span>
+        <span>Rows with the same Group ID are merged into one card.</span>
       </div>
 
       <div className="rounded-md border bg-card">
         <ScrollArea className="h-[600px]">
-          <Table>
-            <TableHeader className="sticky top-0 bg-secondary z-10">
-              <TableRow>
-                {columns.map((col) => (
-                  <TableHead
-                    key={col}
-                    className="cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => handleSort(col)}
-                  >
-                    <div className="flex items-center gap-2">
-                      {col}
-                      {sort.key === col ? (
-                        sort.direction === "asc" ? (
-                          <ChevronUp className="w-4 h-4" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4" />
-                        )
-                      ) : null}
+          <div className="space-y-4 p-4">
+            {sortedEntries.map((entry) => (
+              <article
+                key={entry.GroupID}
+                className="rounded-xl border bg-background/70 p-4 shadow-sm"
+              >
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary">{entry.GroupID}</Badge>
+                    <Badge variant="outline">{entry.rowCount} rows</Badge>
+                  </div>
+
+                  <div className="space-y-1">
+                    <h3 className="text-lg font-semibold leading-tight">{entry.title}</h3>
+                    {entry.comment ? (
+                      <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                        {entry.comment}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+
+                {entry.desc ? (
+                  <div className="mt-4 rounded-lg border bg-muted/30 p-3">
+                    <div className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                      {entry.primaryDescLabel}
                     </div>
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(Object.entries(groupedData) as [string, GameDataRow[]][]).map(([groupName, rows]) => (
-                <React.Fragment key={groupName}>
-                  {groupBy !== "none" && (
-                    <TableRow className="bg-muted/30">
-                      <TableCell colSpan={columns.length} className="font-bold py-2">
-                        <Badge variant="outline" className="mr-2">
-                          {groupName}
-                        </Badge>
-                        <span className="text-muted-foreground text-xs">
-                          ({rows.length} items)
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {rows.map((row, i) => (
-                    <TableRow key={`${groupName}-${i}`}>
-                      {columns.map((col) => (
-                        <TableCell key={col} className="max-w-[300px] truncate">
-                          <span title={row[col]}>{row[col]}</span>
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </React.Fragment>
-              ))}
-            </TableBody>
-          </Table>
+                    <p className="mt-2 whitespace-pre-wrap text-sm">{entry.desc}</p>
+                  </div>
+                ) : null}
+
+                {entry.extraFields.length ? (
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    {entry.extraFields.map((field) => (
+                      <div
+                        key={`${entry.GroupID}-${field.label}`}
+                        className="rounded-lg border p-3"
+                      >
+                        <div className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                          {field.label}
+                        </div>
+                        <p className="mt-2 whitespace-pre-wrap text-sm">{field.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </article>
+            ))}
+
+            {!sortedEntries.length ? (
+              <div className="flex h-[240px] items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
+                No grouped entries matched your search.
+              </div>
+            ) : null}
+          </div>
         </ScrollArea>
       </div>
     </div>

@@ -17,6 +17,19 @@ export interface GameDataRow {
   [key: string]: string;
 }
 
+export interface GroupedGameEntry {
+  GroupID: string;
+  title: string;
+  comment: string;
+  desc: string;
+  primaryDescLabel: string;
+  extraFields: Array<{
+    label: string;
+    value: string;
+  }>;
+  rowCount: number;
+}
+
 export type DataCategory = "skills" | "items" | "boosters" | "metaprogress" | "weapons" | "weapon_modify";
 
 export interface CategoryConfig {
