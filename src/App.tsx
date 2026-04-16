@@ -1,27 +1,68 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/src/components/DataTable";
 import { useGameData } from "@/src/hooks/useGameData";
 import { DataCategory, CATEGORIES } from "@/src/types/game";
-import { Database, Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Globe } from "lucide-react";
+
+const LANGUAGES = [
+  { code: "en", label: "English" },
+  { code: "ko", label: "한국어" },
+  { code: "jp", label: "日本語" },
+  { code: "zh", label: "中文" },
+] as const;
+
+type LanguageCode = (typeof LANGUAGES)[number]["code"];
+
+const STORAGE_KEY = "ovis-loop-data-viewer-language";
+
+function getStoredLanguage(): LanguageCode {
+  if (typeof window === "undefined") return "en";
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored && LANGUAGES.some((l) => l.code === stored)) {
+    return stored as LanguageCode;
+  }
+  return "en";
+}
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<DataCategory>("skills");
+  const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>(getStoredLanguage);
   const { data, loading, error } = useGameData(activeTab);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, selectedLanguage);
+  }, [selectedLanguage]);
 
   return (
     <div className="min-h-screen bg-background p-4 md:p-8 font-sans">
       <div className="max-w-7xl mx-auto space-y-8">
-        <header className="flex items-center gap-4 border-b pb-6">
-          <div className="bg-primary p-3 rounded-xl shadow-lg shadow-primary/20">
-            <Database className="w-8 h-8 text-primary-foreground" />
+        <div className="flex items-center justify-end">
+          <div className="flex items-center gap-2">
+            <Globe className="w-4 h-4 text-muted-foreground" />
+            <Select value={selectedLanguage} onValueChange={(v) => setSelectedLanguage(v as LanguageCode)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Language" />
+              </SelectTrigger>
+              <SelectContent>
+                {LANGUAGES.map((lang) => (
+                  <SelectItem key={lang.code} value={lang.code}>
+                    {lang.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Game Data Explorer</h1>
-            <p className="text-muted-foreground">Browse, filter, and group game assets and localization data.</p>
-          </div>
-        </header>
+        </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DataCategory)} className="w-full">
           <TabsList className="grid grid-cols-3 md:grid-cols-6 h-auto p-1 bg-muted/50 rounded-xl">
@@ -64,7 +105,7 @@ export default function App() {
                       </div>
                     </div>
                   ) : (
-                    <DataTable data={data} />
+                    <DataTable data={data} selectedLanguage={selectedLanguage} />
                   )}
                 </CardContent>
               </Card>

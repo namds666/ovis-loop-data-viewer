@@ -22,6 +22,7 @@ import { ChevronDown, ChevronUp, Search, Filter, Layers } from "lucide-react";
 
 interface DataTableProps {
   data: GameDataRow[];
+  selectedLanguage: string;
 }
 
 type SortConfig = {
@@ -29,7 +30,7 @@ type SortConfig = {
   direction: "asc" | "desc";
 };
 
-export function DataTable({ data }: DataTableProps) {
+export function DataTable({ data, selectedLanguage }: DataTableProps) {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortConfig>({ key: null, direction: "asc" });
   const [groupBy, setGroupBy] = useState<keyof GameDataRow | "none">("none");
@@ -73,7 +74,7 @@ export function DataTable({ data }: DataTableProps) {
     }));
   };
 
-  const columns: (keyof GameDataRow)[] = ["GroupID", "TextID", "Comment", "en", "ko", "jp", "zh"];
+  const columns: (keyof GameDataRow)[] = ["GroupID", "TextID", "Comment", selectedLanguage as keyof GameDataRow];
 
   return (
     <div className="space-y-4">
