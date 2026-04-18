@@ -32,53 +32,62 @@
 }
 
 :root {
-    --background: #0A0A0B;
-    --foreground: #F2F2F2;
-    --card: #141416;
-    --card-foreground: #F2F2F2;
-    --popover: #141416;
-    --popover-foreground: #F2F2F2;
-    --primary: #C5A059;
-    --primary-foreground: #0A0A0B;
-    --secondary: #1C1C1E;
-    --secondary-foreground: #F2F2F2;
-    --muted: #1C1C1E;
-    --muted-foreground: #8E8E93;
-    --accent: #1C1C1E;
-    --accent-foreground: #F2F2F2;
-    --destructive: #E72131;
-    --border: #2C2C2E;
-    --input: #2C2C2E;
-    --ring: #C5A059;
-    --radius: 0.25rem;
+    --background: #030305;
+    --foreground: #F8F8F8;
+    --card: rgba(15, 15, 20, 0.4);
+    --card-foreground: #F8F8F8;
+    --popover: rgba(15, 15, 20, 0.8);
+    --popover-foreground: #F8F8F8;
+    --primary: #F59E0B; /* Vibrant Amber */
+    --primary-foreground: #030305;
+    --secondary: rgba(255, 255, 255, 0.05);
+    --secondary-foreground: #F8F8F8;
+    --muted: rgba(255, 255, 255, 0.03);
+    --muted-foreground: #A1A1AA;
+    --accent: rgba(245, 158, 11, 0.15); /* Amber accent */
+    --accent-foreground: #F59E0B;
+    --destructive: #EF4444;
+    --border: rgba(255, 255, 255, 0.08);
+    --input: rgba(255, 255, 255, 0.05);
+    --ring: rgba(245, 158, 11, 0.5);
+    --radius: 0.5rem;
 }
 
 .dark {
-    --background: #0A0A0B;
-    --foreground: #F2F2F2;
-    --card: #141416;
-    --card-foreground: #F2F2F2;
-    --popover: #141416;
-    --popover-foreground: #F2F2F2;
-    --primary: #C5A059;
-    --primary-foreground: #0A0A0B;
-    --secondary: #1C1C1E;
-    --secondary-foreground: #F2F2F2;
-    --muted: #1C1C1E;
-    --muted-foreground: #8E8E93;
-    --accent: #1C1C1E;
-    --accent-foreground: #F2F2F2;
-    --destructive: #E72131;
-    --border: #2C2C2E;
-    --input: #2C2C2E;
-    --ring: #C5A059;
+    --background: #030305;
+    --foreground: #F8F8F8;
+    --card: rgba(15, 15, 20, 0.4);
+    --card-foreground: #F8F8F8;
+    --popover: rgba(15, 15, 20, 0.8);
+    --popover-foreground: #F8F8F8;
+    --primary: #F59E0B;
+    --primary-foreground: #030305;
+    --secondary: rgba(255, 255, 255, 0.05);
+    --secondary-foreground: #F8F8F8;
+    --muted: rgba(255, 255, 255, 0.03);
+    --muted-foreground: #A1A1AA;
+    --accent: rgba(245, 158, 11, 0.15);
+    --accent-foreground: #F59E0B;
+    --destructive: #EF4444;
+    --border: rgba(255, 255, 255, 0.08);
+    --input: rgba(255, 255, 255, 0.05);
+    --ring: rgba(245, 158, 11, 0.5);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    }
+  }
   body {
-    @apply bg-background text-foreground font-sans;
-    }
+    @apply bg-background text-foreground font-sans antialiased selection:bg-primary/30 selection:text-primary;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-white/[0.02] backdrop-blur-xl border border-white/[0.08] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] rounded-2xl;
+  }
+  .glass-input {
+    @apply bg-black/20 backdrop-blur-lg border border-white/10 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 rounded-xl transition-all duration-300;
+  }
 }

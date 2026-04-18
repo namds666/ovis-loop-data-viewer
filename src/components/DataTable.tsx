@@ -1,5 +1,7 @@
 import { useDeferredValue, useMemo, useState } from "react";
-import { Input } from "@/components/ui/input";
+import { GameDataRow, GroupedGameEntry } from "@/src/types/game";
+import { ArrowDownAZ, ArrowUpAZ, Search, Sparkles } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   Select,
   SelectContent,
@@ -7,10 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { GameDataRow, GroupedGameEntry } from "@/src/types/game";
-import { ArrowDownAZ, ArrowUpAZ, Search } from "lucide-react";
 
 interface DataTableProps {
   data: GameDataRow[];
@@ -104,134 +102,154 @@ export function DataTable({ data, selectedLanguage }: DataTableProps) {
   }, [filteredEntries, sort]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end">
-        <div className="flex-1 space-y-2">
-          <label className="flex items-center gap-2 text-sm font-medium">
-            <Search className="h-4 w-4" /> Search
-          </label>
-          <Input
-            placeholder="Search grouped entries..."
+    <div className="flex flex-col h-full space-y-6">
+      
+      {/* Controls Bar */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center justify-between bg-white/[0.02] border border-white/5 p-4 rounded-2xl backdrop-blur-md">
+        
+        {/* Search */}
+        <div className="relative flex-1 max-w-sm">
+          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+            <Search className="h-4 w-4 text-primary/70" />
+          </div>
+          <input
+            type="text"
+            className="w-full glass-input pl-10 pr-4 py-2.5 text-sm text-white placeholder:text-white/30 outline-none"
+            placeholder="Search database nodes..."
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            className="max-w-sm"
           />
         </div>
 
-        <div className="flex gap-3">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Sort By</label>
-            <Select
-              value={sort.key}
-              onValueChange={(value) =>
-                setSort((prev) => ({ ...prev, key: value as SortConfig["key"] }))
-              }
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Sort by..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="title">Title</SelectItem>
-                <SelectItem value="comment">Comment</SelectItem>
-                <SelectItem value="desc">Desc</SelectItem>
-                <SelectItem value="GroupID">Group ID</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Sort Controls */}
+        <div className="flex gap-2 items-center text-sm">
+          <span className="text-white/40 hidden sm:inline-block mr-2 font-medium tracking-wide">SORT PARAMS</span>
+          
+          <Select
+            value={sort.key}
+            onValueChange={(value) => setSort((prev) => ({ ...prev, key: value as SortConfig["key"] }))}
+          >
+            <SelectTrigger className="w-[140px] glass-input border-white/10 text-white/80 h-10 hover:bg-white/5">
+              <SelectValue placeholder="Sort by..." />
+            </SelectTrigger>
+            <SelectContent className="glass-panel border-white/10 bg-background/95 backdrop-blur-xl">
+              <SelectItem value="title" className="focus:bg-primary/20">Name / Title</SelectItem>
+              <SelectItem value="GroupID" className="focus:bg-primary/20">Group ID</SelectItem>
+              <SelectItem value="comment" className="focus:bg-primary/20">Comment</SelectItem>
+              <SelectItem value="desc" className="focus:bg-primary/20">Description</SelectItem>
+            </SelectContent>
+          </Select>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Direction</label>
-            <Select
-              value={sort.direction}
-              onValueChange={(value) =>
-                setSort((prev) => ({ ...prev, direction: value as SortConfig["direction"] }))
-              }
-            >
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Direction" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="asc">
-                  <span className="flex items-center gap-2">
-                    <ArrowUpAZ className="h-4 w-4" />
-                    Asc
-                  </span>
-                </SelectItem>
-                <SelectItem value="desc">
-                  <span className="flex items-center gap-2">
-                    <ArrowDownAZ className="h-4 w-4" />
-                    Desc
-                  </span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Select
+            value={sort.direction}
+            onValueChange={(value) => setSort((prev) => ({ ...prev, direction: value as SortConfig["direction"] }))}
+          >
+            <SelectTrigger className="w-[110px] glass-input border-white/10 text-white/80 h-10 hover:bg-white/5">
+              <SelectValue placeholder="Direction" />
+            </SelectTrigger>
+            <SelectContent className="glass-panel border-white/10 bg-background/95 backdrop-blur-xl">
+              <SelectItem value="asc" className="focus:bg-primary/20">
+                <span className="flex items-center gap-2"><ArrowUpAZ className="h-4 w-4 text-primary" /> Asc</span>
+              </SelectItem>
+              <SelectItem value="desc" className="focus:bg-primary/20">
+                <span className="flex items-center gap-2"><ArrowDownAZ className="h-4 w-4 text-primary" /> Desc</span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>{sortedEntries.length} grouped entries</span>
-        <span>Rows with the same Group ID are merged into one card.</span>
-      </div>
+      {/* Grid Container */}
+      <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar pb-6 space-y-4">
+        <AnimatePresence>
+          {sortedEntries.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sortedEntries.map((entry, idx) => (
+                <motion.article
+                  key={entry.GroupID}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: Math.min(idx * 0.05, 0.5), duration: 0.4 }}
+                  whileHover={{ scale: 1.02, translateY: -4 }}
+                  className="group relative rounded-2xl glass-panel p-5 overflow-hidden border border-white/10 hover:border-primary/50 transition-colors duration-500"
+                >
+                  {/* Subtle hover glow */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl pointer-events-none" />
 
-      <div className="rounded-md border bg-card">
-        <ScrollArea className="h-[600px]">
-          <div className="space-y-4 p-4">
-            {sortedEntries.map((entry) => (
-              <article
-                key={entry.GroupID}
-                className="rounded-xl border bg-background/70 p-4 shadow-sm"
-              >
-                <div className="space-y-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="secondary">{entry.GroupID}</Badge>
-                    <Badge variant="outline">{entry.rowCount} rows</Badge>
-                  </div>
-
-                  <div className="space-y-1">
-                    <h3 className="text-lg font-semibold leading-tight">{entry.title}</h3>
-                    {entry.comment ? (
-                      <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-                        {entry.comment}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-
-                {entry.desc ? (
-                  <div className="mt-4 rounded-lg border bg-muted/30 p-3">
-                    <div className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                      {entry.primaryDescLabel}
-                    </div>
-                    <p className="mt-2 whitespace-pre-wrap text-sm">{entry.desc}</p>
-                  </div>
-                ) : null}
-
-                {entry.extraFields.length ? (
-                  <div className="mt-4 grid gap-3 md:grid-cols-2">
-                    {entry.extraFields.map((field) => (
-                      <div
-                        key={`${entry.GroupID}-${field.label}`}
-                        className="rounded-lg border p-3"
-                      >
-                        <div className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                          {field.label}
-                        </div>
-                        <p className="mt-2 whitespace-pre-wrap text-sm">{field.value}</p>
+                  <div className="relative z-10 flex flex-col h-full space-y-4">
+                    {/* Header: Badges */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-1 rounded-md bg-white/5 border border-white/10 text-xs font-medium text-white/80 tracking-wider">
+                          {entry.GroupID}
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                ) : null}
-              </article>
-            ))}
+                      <span className="px-2 py-1 rounded bg-primary/10 text-primary text-[10px] uppercase font-bold tracking-widest border border-primary/20">
+                        {entry.rowCount} LNs
+                      </span>
+                    </div>
 
-            {!sortedEntries.length ? (
-              <div className="flex h-[240px] items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
-                No grouped entries matched your search.
+                    {/* Title & Comment */}
+                    <div>
+                      <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">
+                        {entry.title}
+                      </h3>
+                      {entry.comment && (
+                        <p className="text-sm text-primary/80 mt-1.5 font-medium italic">
+                          "{entry.comment}"
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex-1" />
+
+                    {/* Description Content */}
+                    {entry.desc && (
+                      <div className="bg-black/40 rounded-xl p-3 border border-white/5 inset-shadow-sm">
+                        <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">
+                          {entry.primaryDescLabel}
+                        </div>
+                        <p className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap">
+                          {entry.desc}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Extra Fields (Grid) */}
+                    {entry.extraFields.length > 0 && (
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        {entry.extraFields.map((field) => (
+                          <div key={field.label} className="bg-white/5 rounded-lg p-2 border border-white/[0.02]">
+                            <div className="text-[9px] font-bold text-white/40 uppercase tracking-wider mb-0.5 truncate">
+                              {field.label}
+                            </div>
+                            <p className="text-xs text-white/90 truncate font-mono">
+                              {field.value}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.article>
+              ))}
+            </div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="h-full flex flex-col items-center justify-center p-12 text-center"
+            >
+              <div className="w-20 h-20 mb-6 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                <Sparkles className="w-8 h-8 text-white/20" />
               </div>
-            ) : null}
-          </div>
-        </ScrollArea>
+              <h3 className="text-xl font-medium text-white/80">No Nodes Found</h3>
+              <p className="text-sm text-white/40 mt-2 max-w-sm">
+                Try adjusting your search parameters to locate specific database entries.
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
